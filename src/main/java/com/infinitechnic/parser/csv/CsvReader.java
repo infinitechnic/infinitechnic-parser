@@ -22,7 +22,7 @@ public class CsvReader {
 	public CsvReader(final File csvFile, boolean hasHeader, String delimiter) {
 		super();
 		this.csvFile = csvFile;
-		this.csvDocument = new CsvDocument(csvFile.getName(), hasHeader);
+		this.csvDocument = new CsvDocument(csvFile.getName(), hasHeader, Line.class);
 
 		setDelimiter(delimiter);
 	}

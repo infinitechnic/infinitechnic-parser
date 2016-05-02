@@ -45,7 +45,7 @@ public class FieldMappingRule extends BaseRule {
         Set<String> fieldSet = new HashSet<>();
         csvDocument.getHeaders().stream().forEach(h -> {
             //TODO: throw exception if exist already
-            fieldSet.add(caseSensitive?h:h.toLowerCase());
+            fieldSet.add(caseSensitive?h.toString():h.toString().toLowerCase());
         });
         return fieldSet;
     }

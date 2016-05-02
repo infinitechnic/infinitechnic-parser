@@ -7,22 +7,31 @@ import com.infinitechnic.parser.csv.mapping.validation.HasHeaderRule;
 
 import java.util.*;
 
-public class CsvDocument {
+public class CsvDocument<T> {
 	private String filename;
 	private boolean hasHeader;
+	private Class<T> mappingModel;
+
 	private List<String> headers;
 	private List<Line> lines;
+	private List<T> models;
 
-	public CsvDocument(String filename, boolean hasHeader) {
+	public CsvDocument(String filename, boolean hasHeader, Class<T> mappingModel) {
 		super();
 		this.filename = filename;
 		this.hasHeader = hasHeader;
+		this.mappingModel = mappingModel;
 		this.headers = null;
 		this.lines = new ArrayList<Line>();
+		this.models = new ArrayList<>();
+
+		if (!Line.class.equals(mappingModel)) {
+			validate();
+		}
 	}
 	
-	public CsvDocument(String filename) {
-		this(filename, true);
+	public CsvDocument(String filename, Class<T> mappingModel) {
+		this(filename, true, mappingModel);
 	}
 
 	public String getFilename() {
@@ -59,18 +68,15 @@ public class CsvDocument {
 		lines.clear();
 	}
 
-	public <C> List<C> transform(Class<C> clazz) {
-		CsvMappingRule rule = new CsvMappingRule(this, clazz);
-		rule.addChain(new HasHeaderRule(this, clazz))
-				.addChain(new FieldMappingRule(this, clazz));
+	private void validate() {
+		CsvMappingRule rule = new CsvMappingRule(this, mappingModel);
+		rule.addChain(new HasHeaderRule(this, mappingModel))
+				.addChain(new FieldMappingRule(this, mappingModel));
 		rule.validate();
+	}
 
-		//TODO: perform transformation
-		List<C> objects = new ArrayList<>(lines.size());
-		for (Line line : lines) {	//TODO: see how to use stream
-//			objects.add(line.transform())
-		}
-		return null;
+	public int getNoOfLines() {
+		return lines.size();
 	}
 
 	public Iterator<Line> iterator() {
