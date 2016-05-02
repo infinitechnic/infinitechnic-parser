@@ -5,27 +5,28 @@ import com.infinitechnic.parser.csv.mapping.validation.CsvMappingRule;
 import com.infinitechnic.parser.csv.mapping.validation.FieldMappingRule;
 import com.infinitechnic.parser.csv.mapping.validation.HasHeaderRule;
 
+import java.lang.reflect.Field;
 import java.util.*;
 
 public class CsvDocument<T> {
 	private String filename;
 	private boolean hasHeader;
-	private Class<T> mappingModel;
+	private Class<T> modelType;
 
 	private List<String> headers;
-	private List<Line> lines;
+//	private List<Line> lines;
 	private List<T> models;
 
-	public CsvDocument(String filename, boolean hasHeader, Class<T> mappingModel) {
+	public CsvDocument(String filename, boolean hasHeader, Class<T> modelType) {
 		super();
 		this.filename = filename;
 		this.hasHeader = hasHeader;
-		this.mappingModel = mappingModel;
+		this.modelType = modelType;
 		this.headers = null;
-		this.lines = new ArrayList<Line>();
+//		this.lines = new ArrayList<Line>();
 		this.models = new ArrayList<>();
 
-		if (!Line.class.equals(mappingModel)) {
+		if (!Line.class.equals(modelType)) {
 			validate();
 		}
 	}
@@ -46,8 +47,12 @@ public class CsvDocument<T> {
 		return hasHeader;
 	}
 
-	public void setHasHeader(boolean hasHeader) {
+	protected void setHasHeader(boolean hasHeader) {
 		this.hasHeader = hasHeader;
+	}
+
+	public Class<T> getModelType() {
+		return modelType;
 	}
 
 	public List<String> getHeaders() {
@@ -58,6 +63,19 @@ public class CsvDocument<T> {
 		this.headers = headers;
 	}
 
+	private void validate() {
+		CsvMappingRule rule = new CsvMappingRule(this, modelType);
+		rule.addChain(new HasHeaderRule(this, modelType))
+				.addChain(new FieldMappingRule(this, modelType));
+		rule.validate();
+	}
+
+	protected Map<String, Field> getFieldMap() {
+		Map<String, Field> fieldMap = new HashMap<>();
+		//TODO: get field map logic
+		return fieldMap;
+	}
+/*
 	protected void addLine(Line line) {
 		line.setHeaders(headers);
 		lines.add(line);
@@ -66,13 +84,6 @@ public class CsvDocument<T> {
 	protected void clear() {
 		headers = null;
 		lines.clear();
-	}
-
-	private void validate() {
-		CsvMappingRule rule = new CsvMappingRule(this, mappingModel);
-		rule.addChain(new HasHeaderRule(this, mappingModel))
-				.addChain(new FieldMappingRule(this, mappingModel));
-		rule.validate();
 	}
 
 	public int getNoOfLines() {
@@ -109,5 +120,52 @@ public class CsvDocument<T> {
 			throw new NoSuchElementException();
 		}
 	}
+*/
 
+	protected void addModel(T model) {
+		models.add(model);
+		if (Line.class.equals(model.getClass())) {
+			((Line)model).setHeaders(headers);
+		}
+	}
+
+	protected void clear() {
+		headers = null;
+		models.clear();
+	}
+
+	public int getNoOfLines() {
+		return models.size();
+	}
+
+	public Iterator<T> iterator() {
+		return new ModelIterator<T>(models);
+	}
+
+	private static final class ModelIterator<T> implements Iterator<T> {
+		private int cursor;
+		private final List<T> models;
+		private final int end;
+
+		public ModelIterator(List<T> models) {
+			this.cursor = 0;
+			this.models = models == null ? new ArrayList<T>() : models;
+			this.end = this.models.size() - 1;
+		}
+
+		@Override
+		public boolean hasNext() {
+			return cursor <= end;
+		}
+
+		@Override
+		public T next() {
+			if (this.hasNext()) {
+				int current = cursor;
+				cursor++;
+				return models.get(current);
+			}
+			throw new NoSuchElementException();
+		}
+	}
 }

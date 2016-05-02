@@ -2,36 +2,51 @@ package com.infinitechnic.parser.csv;
 
 import com.infinitechnic.util.StringUtil;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.io.*;
+import java.lang.reflect.Field;
+import java.util.*;
 
 public class CsvReader {
 	private final static String DEFAULT_DELIMITER = ",";
 	private final static String REGEXP = "(?=([^\"]*\"[^\"]*\")*[^\"]*$)";
 	private final static String DOUBLE_QUOTE = "\"";
 
-	private File csvFile;
+	private FileInputStream fis;
+	private Class<?> mappingModel;
 	private CsvDocument csvDocument;
 	private String delimiter;
 	private String regExpWithDelimiter;
 
-	public CsvReader(final File csvFile, boolean hasHeader, String delimiter) {
+	public CsvReader(final String filename, final FileInputStream fis, boolean hasHeader, String delimiter) {
 		super();
-		this.csvFile = csvFile;
-		this.csvDocument = new CsvDocument(csvFile.getName(), hasHeader, Line.class);
+		this.fis = fis;
+		this.csvDocument = new CsvDocument(filename, hasHeader, Line.class);
 
 		setDelimiter(delimiter);
 	}
-	
-	public CsvReader(final File csvFile, boolean hasHeader) {
+
+	public CsvReader(final String filename, final FileInputStream fis, boolean hasHeader) {
+		this(filename, fis, hasHeader, DEFAULT_DELIMITER);
+	}
+
+	public CsvReader(final String filename, final FileInputStream fis) {
+		this(filename, fis, true);
+	}
+
+	public CsvReader(final File csvFile, boolean hasHeader, String delimiter) {
+		this(csvFile.getName(), null, hasHeader, delimiter);
+		try {
+			this.fis = new FileInputStream(csvFile);
+		} catch (FileNotFoundException fnfe) {
+			throw new RuntimeException("CSV file can't be found!", fnfe);
+		}
+	}
+
+	public CsvReader(final File csvFile, boolean hasHeader) throws FileNotFoundException {
 		this(csvFile, hasHeader, DEFAULT_DELIMITER);
 	}
 	
-	public CsvReader(final File csvFile) {
+	public CsvReader(final File csvFile) throws FileNotFoundException {
 		this(csvFile, true);
 	}
 
@@ -56,15 +71,24 @@ public class CsvReader {
 	}
 
 	public CsvDocument read() {
-		try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
+		try (BufferedReader br = new BufferedReader(new InputStreamReader(fis))) {
 			csvDocument.clear();
 			String lineStr = "";
+			Line line = null;
 			while ((lineStr = br.readLine()) != null) {
 				if (csvDocument.isHasHeader() && csvDocument.getHeaders() == null) {
 					csvDocument.setHeaders(toHeaders(lineStr));
 				} else {
-					csvDocument.addLine(new Line(toCells(lineStr)));
+//					csvDocument.addLine(new Line(toCells(lineStr)));
+					line = new Line(toCells(lineStr));
 					//TODO: Warning message can be logged if no. of cells is diff from no. of headers
+					if (Line.class.equals(csvDocument.getModelType())) {
+						csvDocument.addModel(line);
+					} else {
+						//TODO: Field Mapping
+						Map<String, Field> fieldMap = new HashMap<>();
+						csvDocument.addModel(line.transform(csvDocument.getModelType(), fieldMap));
+					}
 				}
 			}
 		} catch (Exception e) {
