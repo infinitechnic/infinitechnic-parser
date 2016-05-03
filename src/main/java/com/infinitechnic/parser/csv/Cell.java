@@ -1,12 +1,13 @@
 package com.infinitechnic.parser.csv;
 
+import com.infinitechnic.parser.csv.exception.IllegalOperationException;
+import com.infinitechnic.util.DateUtil;
+import com.infinitechnic.util.NumberUtil;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.infinitechnic.parser.csv.exception.IllegalOperationException;
-import com.infinitechnic.util.NumberUtil;
 
 public class Cell {
 	private final static String DELIMITER_ARRAY = ",";
@@ -30,6 +31,10 @@ public class Cell {
 	
 	public boolean isFloat() {
 		return NumberUtil.isFloat(content);
+	}
+
+	public boolean isDate(String format) {
+		return DateUtil.isDate(content, format);
 	}
 
 	public boolean isUuid() {

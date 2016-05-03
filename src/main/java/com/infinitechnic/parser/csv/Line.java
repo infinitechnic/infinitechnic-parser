@@ -1,8 +1,14 @@
 package com.infinitechnic.parser.csv;
 
+import com.infinitechnic.parser.csv.exception.InvalidDataFormatException;
+import com.infinitechnic.parser.csv.mapping.CsvCell;
+import com.infinitechnic.util.DateUtil;
+import com.infinitechnic.util.ReflectionUtil;
 import com.infinitechnic.util.StringUtil;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -12,15 +18,11 @@ public class Line {
 	private List<Cell> cells;
 	private int noOfCells;
 
-	public Line(List<Cell> cells) {
+	public Line(List<String> headers, List<Cell> cells) {
 		super();
-		this.headers = null;
+		this.headers = headers;
 		this.cells = cells;
 		this.noOfCells = cells == null ? 0 : cells.size();
-	}
-
-	protected void setHeaders(List<String> headers) {
-		this.headers = headers;
 	}
 
 	public List<Cell> getCells() {
@@ -41,17 +43,33 @@ public class Line {
 		return noOfCells;
 	}
 
-	protected <E> E transform(E mappingObject, Map<String, Field> fieldMap) {
-		if (mappingObject != null && fieldMap != null) {
+	protected <E> E transform(Class<E> clazz, Map<String, Field> fieldMap) throws IllegalAccessException, InstantiationException {
+		if (clazz != null && fieldMap != null) {
+			E object = clazz.newInstance();
 			fieldMap.entrySet().stream().forEach(e -> {
-				setValue(getCell(e.getKey()), e.getValue());
+				Cell cell = getCell(e.getKey());
+				if (cell != null) {
+					setValue(cell, object, e.getValue());
+				}
 			});
+			return object;
 		}
-		return mappingObject;
+		return null;
 	}
 
-	//TODO: define strategy under mapping package
-	private void setValue(Cell cell, Field field) {
-
+	//TODO: any special types?
+	private void setValue(Cell cell, Object instance, Field field) {
+		try {
+			if (Date.class.isAssignableFrom(field.getType())) {
+				CsvCell csvCell = field.getAnnotation(CsvCell.class);
+				if (csvCell != null) {
+					ReflectionUtil.setValue(instance, field, DateUtil.parseDate(cell.toString(), csvCell.format()));
+				}
+			} else {
+				ReflectionUtil.setValue(instance, field, cell.toString());
+			}
+		} catch (Exception e) {
+			throw new InvalidDataFormatException(StringUtil.concat("Cannot set on field[", field.getName(), "], value[", cell.toString(), "]"), e);
+		}
 	}
 }
