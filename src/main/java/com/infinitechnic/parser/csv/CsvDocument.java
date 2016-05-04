@@ -197,15 +197,20 @@ public class CsvDocument<T> {
 	private Map<String, Field> getClassFieldMap(boolean csvMapping, boolean caseSensitive) {
 		Map<String, Field> fieldMap = new HashMap<>();
 		ReflectionUtil.getAllFields(modelType).stream().forEach(f -> {
-			CsvCell csvCell;
 			String fieldName;
-			if (csvMapping && (csvCell = f.getAnnotation(CsvCell.class)) != null) {
-				fieldName = StringUtil.isEmpty(csvCell.name()) ? f.getName() : csvCell.name();
-				if (!caseSensitive) {
-					fieldName = fieldName.toLowerCase();
+			if (csvMapping) {
+				CsvCell csvCell;
+				if ((csvCell = f.getAnnotation(CsvCell.class)) != null) {
+					fieldName = StringUtil.isEmpty(csvCell.name()) ? f.getName() : csvCell.name();
+					if (!caseSensitive) {
+						fieldName = fieldName.toLowerCase();
+					}
+					fieldMap.put(fieldName, f);
+				} else if (f.getAnnotation(CsvIgnore.class) == null) {
+					fieldName = caseSensitive ? f.getName() : f.getName().toLowerCase();
+					fieldMap.put(fieldName, f);
 				}
-				fieldMap.put(fieldName, f);
-			} else if (f.getAnnotation(CsvIgnore.class) == null) {
+			} else {
 				fieldName = caseSensitive ? f.getName() : f.getName().toLowerCase();
 				fieldMap.put(fieldName, f);
 			}
