@@ -43,9 +43,8 @@ public class Line {
 		return noOfCells;
 	}
 
-	protected <E> E transform(Class<E> clazz, Map<String, Field> fieldMap) throws IllegalAccessException, InstantiationException {
-		if (clazz != null && fieldMap != null) {
-			E object = clazz.newInstance();
+	protected <E> E transform(E object, Map<String, Field> fieldMap) throws IllegalAccessException, InstantiationException {
+		if (object != null && fieldMap != null) {
 			fieldMap.entrySet().stream().forEach(e -> {
 				Cell cell = getCell(e.getKey());
 				if (cell != null) {
