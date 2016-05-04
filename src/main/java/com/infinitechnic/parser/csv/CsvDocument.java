@@ -1,8 +1,10 @@
 package com.infinitechnic.parser.csv;
 
 
+import com.infinitechnic.parser.csv.event.TransformCompletedHandler;
 import com.infinitechnic.parser.csv.exception.IllegalOperationException;
 import com.infinitechnic.parser.csv.mapping.CsvCell;
+import com.infinitechnic.parser.csv.mapping.CsvIgnore;
 import com.infinitechnic.parser.csv.mapping.CsvMapping;
 import com.infinitechnic.util.ReflectionUtil;
 import com.infinitechnic.util.StringUtil;
@@ -27,6 +29,7 @@ public class CsvDocument<T> {
 	private List<String> headers;
 	private List<T> models;
 	private Map<String, Field> fieldMap;
+	private List<TransformCompletedHandler> tcHandlers;
 
 	public CsvDocument(String filename, String delimiter, boolean hasHeader, Class<T> modelType) {
 		super();
@@ -37,6 +40,7 @@ public class CsvDocument<T> {
 
 		this.headers = null;
 		this.models = new ArrayList<>();
+		this.tcHandlers = new ArrayList<>();
 
 		setDelimiter(delimiter);
 
@@ -75,6 +79,12 @@ public class CsvDocument<T> {
 
 	public Iterator<T> iterator() {
 		return new ModelIterator<T>(models);
+	}
+
+	protected void add(TransformCompletedHandler<T> handler) {
+		if (handler != null) {
+			tcHandlers.add(handler);
+		}
 	}
 
 	protected void readHeader(String headerStr) {
@@ -122,7 +132,9 @@ public class CsvDocument<T> {
 		if (lineModel) {
 			models.add((T)line);
 		} else {
-			models.add(line.transform(modelType, fieldMap));
+			T object = line.transform(modelType.newInstance(), fieldMap);
+			transformCompleted(object);
+			models.add(object);
 		}
 	}
 
@@ -185,19 +197,31 @@ public class CsvDocument<T> {
 	private Map<String, Field> getClassFieldMap(boolean csvMapping, boolean caseSensitive) {
 		Map<String, Field> fieldMap = new HashMap<>();
 		ReflectionUtil.getAllFields(modelType).stream().forEach(f -> {
-			CsvCell csvCell;
 			String fieldName;
-			if (csvMapping && (csvCell = f.getAnnotation(CsvCell.class)) != null) {
-				fieldName = StringUtil.isEmpty(csvCell.name()) ? f.getName() : csvCell.name();
-				if (!caseSensitive) {
-					fieldName = fieldName.toLowerCase();
+			if (csvMapping) {
+				CsvCell csvCell;
+				if ((csvCell = f.getAnnotation(CsvCell.class)) != null) {
+					fieldName = StringUtil.isEmpty(csvCell.name()) ? f.getName() : csvCell.name();
+					if (!caseSensitive) {
+						fieldName = fieldName.toLowerCase();
+					}
+					fieldMap.put(fieldName, f);
+				} else if (f.getAnnotation(CsvIgnore.class) == null) {
+					fieldName = caseSensitive ? f.getName() : f.getName().toLowerCase();
+					fieldMap.put(fieldName, f);
 				}
 			} else {
 				fieldName = caseSensitive ? f.getName() : f.getName().toLowerCase();
+				fieldMap.put(fieldName, f);
 			}
-			fieldMap.put(fieldName, f);
 		});
 		return fieldMap;
+	}
+
+	private void transformCompleted(T object) {
+		tcHandlers.stream().forEach(h -> {
+			h.handle(object);
+		});
 	}
 
 	private void log(String type, Set<String> fields) {
