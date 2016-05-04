@@ -1,6 +1,7 @@
 package com.infinitechnic.parser.csv;
 
 import com.infinitechnic.parser.csv.mapping.CsvCell;
+import com.infinitechnic.parser.csv.mapping.CsvIgnore;
 import com.infinitechnic.parser.csv.mapping.CsvMapping;
 
 import java.math.BigDecimal;
@@ -27,7 +28,9 @@ public final class FutureTradeRaw {
 	@CsvCell(format = "M/d/yyyy")
 	private Date settlementDate;
 	private String companyCode;
+	@CsvIgnore
 	private String systemCode;
+	@CsvIgnore
 	private String recordStatusCode;
 
 	public Integer getCode() {
