@@ -71,4 +71,19 @@ public class Line {
 			throw new InvalidDataFormatException(StringUtil.concat("Cannot set on field[", field.getName(), "], value[", cell.toString(), "]"), e);
 		}
 	}
+
+	@Override
+	public String toString() {
+		String delimiter = "|";
+		StringBuilder sb = new StringBuilder();
+		if (cells != null) {
+			cells.stream().forEach(c -> {
+				if (sb.length() > 0) {
+					sb.append(delimiter);
+				}
+				sb.append(c);
+			});
+		}
+		return sb.toString();
+	}
 }
